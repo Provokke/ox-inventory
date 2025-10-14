@@ -1,0 +1,67 @@
+OX INVENTORY RESKIN - PRODUCTION OPTIMIZED VERSION
+==================================================
+
+This is a production-optimized version of ox_inventory, originally developed by the Overextended team.
+
+ORIGINAL LICENSE
+================
+The original ox_inventory is licensed under the GNU General Public License v3.0 (GPL-3.0).
+The full original license text is available in the LICENSE file in this repository.
+
+RESKIN MODIFICATIONS
+====================
+This version contains the following modifications:
+- Removal of development dependencies and source code
+- Production optimization and performance improvements  
+- File structure cleanup and organization
+- Documentation enhancements
+- Build artifact optimization
+
+COPYRIGHT NOTICE
+================
+Original Work: Copyright (C) Overextended (ox_inventory)
+Modifications: Production optimization and cleanup
+
+LICENSING TERMS
+===============
+This modified version is distributed under the same GPL-3.0 license as the original work.
+
+Key points:
+- You are free to use, modify, and distribute this software
+- Any modifications must also be released under GPL-3.0
+- Source code must be made available when distributing
+- No warranty is provided
+
+ATTRIBUTION
+===========
+When using this software, please maintain attribution to:
+- Original developers: Overextended team (ox_inventory)
+- This production optimization work
+
+DISCLAIMER
+==========
+This is an unofficial optimization of ox_inventory. 
+For official support and development, please refer to the original ox_inventory repository.
+
+The modifications in this version focus on production deployment optimization
+and do not alter the core functionality of the original software.
+
+COMPLIANCE
+==========
+This distribution complies with GPL-3.0 requirements by:
+- Maintaining the original license
+- Providing clear attribution
+- Documenting modifications made
+- Ensuring continued open-source availability
+
+For the complete GPL-3.0 license terms, see the LICENSE file.
+
+CONTACT
+=======
+For issues specific to this production-optimized version, please check the documentation.
+For core ox_inventory issues, please refer to the original project.
+
+---
+
+This production-optimized version respects the original licensing terms
+while providing enhanced deployment readiness for FiveM server administrators.
