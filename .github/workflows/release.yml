@@ -1,83 +1,92 @@
-name: Create Release
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*.*.*"
 
 jobs:
-  release:
+  create-release:
+    name: Build and Create Tagged release
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Get tag name
-      id: tag
-      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-    - name: Create release archive
-      run: |
-        # Create a clean directory for the release
-        mkdir -p release/ox_inventory
-        
-        # Copy all necessary files
-        cp -r client.lua release/ox_inventory/
-        cp -r server.lua release/ox_inventory/
-        cp -r init.lua release/ox_inventory/
-        cp -r fxmanifest.lua release/ox_inventory/
-        cp -r data/ release/ox_inventory/
-        cp -r locales/ release/ox_inventory/
-        cp -r modules/ release/ox_inventory/
-        cp -r web/ release/ox_inventory/
-        cp -r LICENSE release/ox_inventory/
-        cp -r LICENSE-RESKIN release/ox_inventory/
-        cp -r README.md release/ox_inventory/
-        cp -r CHANGELOG.md release/ox_inventory/
-        
-        # Create the archive
-        cd release
-        zip -r ../ox_inventory-${{ steps.tag.outputs.tag }}.zip ox_inventory/
-        cd ..
-        
-        # Create checksums
-        sha256sum ox_inventory-${{ steps.tag.outputs.tag }}.zip > ox_inventory-${{ steps.tag.outputs.tag }}.zip.sha256
-        
-    - name: Extract changelog for this version
-      id: changelog
-      run: |
-        # Extract changelog section for this version
-        if [ -f CHANGELOG.md ]; then
-          # Get the changelog section for this version
-          awk '/^## \[.*\].*/{if(found) exit; if(/\[${{ steps.tag.outputs.tag }}\]/) found=1; next} found' CHANGELOG.md > release_notes.md
-          if [ ! -s release_notes.md ]; then
-            echo "Release ${{ steps.tag.outputs.tag }}" > release_notes.md
-            echo "" >> release_notes.md
-            echo "Production-optimized version of ox_inventory." >> release_notes.md
-          fi
-        else
-          echo "Release ${{ steps.tag.outputs.tag }}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "Production-optimized version of ox_inventory." >> release_notes.md
-        fi
-        
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.tag.outputs.tag }}
-        name: OX Inventory Reskin ${{ steps.tag.outputs.tag }}
-        body_path: release_notes.md
-        files: |
-          ox_inventory-${{ steps.tag.outputs.tag }}.zip
-          ox_inventory-${{ steps.tag.outputs.tag }}.zip.sha256
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Update latest release info
-      run: |
-        echo "Release ${{ steps.tag.outputs.tag }} created successfully!"
-        echo "Archive: ox_inventory-${{ steps.tag.outputs.tag }}.zip"
-        echo "SHA256: $(cat ox_inventory-${{ steps.tag.outputs.tag }}.zip.sha256)"
+      - name: Install archive tools
+        run: sudo apt install zip
+
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.0.0
+        with:
+          version: 9
+
+      - name: Get variables
+        id: get_vars
+        run: |
+          echo '::set-output name=SHORT_SHA::$(git rev-parse --short HEAD)'
+          echo '::set-output name=DATE::$(date +'%D')'
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18.x
+          cache: "pnpm"
+          cache-dependency-path: "web/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+        working-directory: web
+
+      - name: Run build
+        run: pnpm build
+        working-directory: web
+        env:
+          CI: false
+
+      - name: Bump manifest version
+        run: node .github/actions/bump-manifest-version.js
+        env:
+          TGT_RELEASE_VERSION: ${{ github.ref_name }}
+
+      - name: Push manifest change
+        uses: EndBug/add-and-commit@v8
+        with:
+          add: fxmanifest.lua
+          push: true
+          author_name: Manifest Bumper
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          message: "chore: bump manifest version to ${{ github.ref_name }}"
+
+      - name: Update tag ref
+        uses: EndBug/latest-tag@latest
+        with:
+          tag-name: ${{ github.ref_name }}
+
+      - name: Bundle files
+        run: |
+          mkdir -p ./temp/ox_inventory
+          mkdir -p ./temp/ox_inventory/web
+          cp ./{server.lua,README.md,LICENSE,fxmanifest.lua,client.lua,init.lua} ./temp/ox_inventory
+          cp -r ./{setup,modules,data,locales} ./temp/ox_inventory
+          cp -r ./web/build ./temp/ox_inventory/web/build
+          cp ./web/LICENSE ./temp/ox_inventory/web/build
+          cp -r ./web/images ./temp/ox_inventory/web/images
+          cd ./temp && zip -r ../ox_inventory.zip ./ox_inventory
+
+      - name: Create Release
+        uses: "marvinpinto/action-automatic-releases@v1.2.1"
+        id: auto_release
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          title: "${{ env.RELEASE_VERSION }}"
+          prerelease: false
+          files: ox_inventory.zip
+
+        env:
+          CI: false
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
